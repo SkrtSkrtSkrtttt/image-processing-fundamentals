@@ -1,51 +1,57 @@
-# Naafiul Hossain — ESE 358/568 Project 1 (pixel-scanned implementation)
-# Requirements: pillow, matplotlib
-# Run: python proj1.py (place shed1-small.jpg next to this file)
+# Naafiul Hossain — Project 1: RGB Pixel Operations (pixel-scanned)
+git add CompVison358-Project1.py AG.jpg
 
 from PIL import Image
 import matplotlib.pyplot as plt
 
+# ---- set your image path here ----
 IMAGE_PATH = r"C:\Users\Naafiul Hossain\Downloads\shed1-small (1).jpg"
+# Or use a relative file next to this script:
+# IMAGE_PATH = "shed1-small.jpg"
 
+# ---------- helpers ----------
 def load_rgb_u8(path):
-    img = Image.open(path).convert("RGB")
+    img = Image.open(path).convert("RGB")  # force RGB, 8-bit per channel
     if img.size != (512, 512):
-        raise ValueError(f"Image must be 512x512, got {img.size}. Use the provided shed1-small.jpg/shed2-small.jpg.")
-    return img  # PIL Image RGB, 8-bit
+        raise ValueError(f"Image must be 512x512, got {img.size}. Use shed1-small.jpg/shed2-small.jpg.")
+    return img
 
 def show_img(img, title):
-    plt.imshow(img)
+    # If grayscale (single-band), force gray colormap (no false-color)
+    if isinstance(img, Image.Image) and img.mode == "L":
+        plt.imshow(img, cmap="gray", vmin=0, vmax=255)
+    else:
+        plt.imshow(img)
     plt.title(title)
     plt.axis("off")
     plt.show()
 
 def pil_gray_from_2d(arr2d):
-    # arr2d is a list of lists of 0..255 ints; convert back to PIL L
-    out = Image.new("L", (len(arr2d[0]), len(arr2d)))
+    # arr2d: list of lists of 0..255 ints (H x W)
+    h = len(arr2d)
+    w = len(arr2d[0])
+    out = Image.new("L", (w, h))
     out.putdata([v for row in arr2d for v in row])
     return out
 
 def pil_from_2d(arr2d, mode="L"):
-    out = Image.new(mode, (len(arr2d[0]), len(arr2d)))
+    h = len(arr2d)
+    w = len(arr2d[0])
+    out = Image.new(mode, (w, h))
     out.putdata([v for row in arr2d for v in row])
     return out
 
 def save_gray(path, arr2d):
     pil_gray_from_2d(arr2d).save(path, format="JPEG")
 
-# 1) Read and display
+# ---------- 1) read & display ----------
 A = load_rgb_u8(IMAGE_PATH)
 show_img(A, "Original Image A (512×512)")
 
-# Convert to per-pixel list for scanning
 W, H = A.size
-pixels = A.load()  # direct pixel access (x,y) -> (R,G,B)
+pixels = A.load()  # random-access (x,y) -> (R,G,B)
 
-# -----------------------------
-# 2) Isolate RGB channels
-#    (produce grayscale AND true-color versions)
-# -----------------------------
-# RC, GC, BC already computed by pixel scan below; keep this loop
+# ---------- 2) isolate channels (grayscale + true-color) ----------
 RC = [[0]*W for _ in range(H)]
 GC = [[0]*W for _ in range(H)]
 BC = [[0]*W for _ in range(H)]
@@ -56,8 +62,7 @@ for y in range(H):
         GC[y][x] = g
         BC[y][x] = b
 
-# ----- Grayscale (single-band) versions for plots/histograms -----
-RC_gray = pil_from_2d(RC)  # mode "L"
+RC_gray = pil_from_2d(RC)  # "L"
 GC_gray = pil_from_2d(GC)
 BC_gray = pil_from_2d(BC)
 
@@ -65,34 +70,37 @@ RC_gray.save("RC_gray.jpg", format="JPEG")
 GC_gray.save("GC_gray.jpg", format="JPEG")
 BC_gray.save("BC_gray.jpg", format="JPEG")
 
-plt.imshow(RC_gray, cmap="Reds", vmin=0, vmax=255); plt.title("Red Channel (grayscale)"); plt.axis("off"); plt.show()
-plt.imshow(GC_gray, cmap="Greens", vmin=0, vmax=255); plt.title("Green Channel (grayscale)"); plt.axis("off"); plt.show()
-plt.imshow(BC_gray, cmap="Blues", vmin=0, vmax=255); plt.title("Blue Channel (grayscale)"); plt.axis("off"); plt.show()
+# Show grayscale channel images in true gray (no false-color)
+show_img(RC_gray, "Red Channel (grayscale RC)")
+show_img(GC_gray, "Green Channel (grayscale GC)")
+show_img(BC_gray, "Blue Channel (grayscale BC)")
 
-# ----- True-color views (only one channel kept in RGB) -----
+# True-color views (only one channel kept)
 zero = Image.new("L", (W, H), 0)
-RC_rgb = Image.merge("RGB", (RC_gray, zero,      zero     ))  # (R,0,0)
-GC_rgb = Image.merge("RGB", (zero,     GC_gray,  zero     ))  # (0,G,0)
-BC_rgb = Image.merge("RGB", (zero,     zero,     BC_gray  ))  # (0,0,B)
+RC_rgb = Image.merge("RGB", (RC_gray, zero,     zero))
+GC_rgb = Image.merge("RGB", (zero,     GC_gray, zero))
+BC_rgb = Image.merge("RGB", (zero,     zero,    BC_gray))
 
 RC_rgb.save("RC_rgb.jpg", format="JPEG")
 GC_rgb.save("GC_rgb.jpg", format="JPEG")
 BC_rgb.save("BC_rgb.jpg", format="JPEG")
 
-plt.imshow(RC_rgb); plt.title("Red Channel (true RGB)"); plt.axis("off"); plt.show()
-plt.imshow(GC_rgb); plt.title("Green Channel (true RGB)"); plt.axis("off"); plt.show()
-plt.imshow(BC_rgb); plt.title("Blue Channel (true RGB)"); plt.axis("off"); plt.show()
+show_img(RC_rgb, "Red Channel (true RGB)")
+show_img(GC_rgb, "Green Channel (true RGB)")
+show_img(BC_rgb, "Blue Channel (true RGB)")
 
-
-# 3) Grayscale AG by explicit average of R,G,B
+# ---------- 3) grayscale AG by average ----------
 AG = [[0]*W for _ in range(H)]
 for y in range(H):
     for x in range(W):
         r, g, b = pixels[x, y]
-        AG[y][x] = (r + g + b) // 3  # integer average
-show_img(pil_gray_from_2d(AG), "Grayscale AG")
+        AG[y][x] = (r + g + b) // 3
 
-# 4) Histograms of RC, GC, BC, AG by explicit counting
+AG_img = pil_gray_from_2d(AG)
+show_img(AG_img, "Grayscale Image AG")
+AG_img.save("AG.jpg", format="JPEG")
+
+# ---------- 4) histograms by explicit counting ----------
 def histogram_0_255(arr2d):
     hist = [0]*256
     for row in arr2d:
@@ -109,7 +117,7 @@ for name, arr in [("RC", RC), ("GC", GC), ("BC", BC), ("AG", AG)]:
     plt.xlim(0, 255)
     plt.show()
 
-# 5) Binarization AB with user TB
+# ---------- 5) binarization ----------
 try:
     TB = int(input("Enter threshold TB (0–255): "))
     if not (0 <= TB <= 255):
@@ -123,10 +131,11 @@ for y in range(H):
     for x in range(W):
         AB[y][x] = 255 if AG[y][x] >= TB else 0
 
-show_img(pil_gray_from_2d(AB), f"Binary AB (TB={TB})")
-save_gray("AB.jpg", AB)
+AB_img = pil_gray_from_2d(AB)
+show_img(AB_img, f"Binary Image AB (TB={TB})")
+AB_img.save("AB.jpg", format="JPEG")
 
-# 6) Simple edge detection AE via forward differences, GM threshold TE
+# ---------- 6) simple edge detection ----------
 try:
     TE = float(input("Enter edge threshold TE (e.g., 15): "))
 except ValueError:
@@ -137,7 +146,7 @@ Gx = [[0]*W for _ in range(H)]
 Gy = [[0]*W for _ in range(H)]
 GM = [[0.0]*W for _ in range(H)]
 
-# Forward differences; last col/row = 0 per spec
+# Forward differences (last col/row remain 0 by spec)
 for y in range(H):
     for x in range(W-1):
         Gx[y][x] = AG[y][x+1] - AG[y][x]
@@ -156,14 +165,14 @@ for y in range(H):
     for x in range(W):
         AE[y][x] = 255 if GM[y][x] > TE else 0
 
-show_img(pil_gray_from_2d(AE), f"Edge Image AE (TE={TE})")
-save_gray("AE.jpg", AE)
+AE_img = pil_gray_from_2d(AE)
+show_img(AE_img, f"Edge Image AE (TE={TE})")
+AE_img.save("AE.jpg", format="JPEG")
 
-# 7) Image pyramid (AG2, AG4, AG8) via 2x2 average (explicit access)
+# ---------- 7) image pyramid ----------
 def downsample_2x2(arr2d):
     h = len(arr2d)
     w = len(arr2d[0])
-    # assume even (512 is even). If odd, drop last row/col.
     H2 = h // 2
     W2 = w // 2
     out = [[0]*W2 for _ in range(H2)]
@@ -179,11 +188,14 @@ AG2 = downsample_2x2(AG)
 AG4 = downsample_2x2(AG2)
 AG8 = downsample_2x2(AG4)
 
-show_img(pil_gray_from_2d(AG2), "Image Pyramid: AG2 (256×256)")
-show_img(pil_gray_from_2d(AG4), "Image Pyramid: AG4 (128×128)")
-show_img(pil_gray_from_2d(AG8), "Image Pyramid: AG8 (64×64)")
+AG2_img = pil_gray_from_2d(AG2)
+AG4_img = pil_gray_from_2d(AG4)
+AG8_img = pil_gray_from_2d(AG8)
 
-# Save pyramid images
-pil_gray_from_2d(AG2).save("AG2.jpg", format="JPEG")
-pil_gray_from_2d(AG4).save("AG4.jpg", format="JPEG")
-pil_gray_from_2d(AG8).save("AG8.jpg", format="JPEG")
+show_img(AG2_img, "Image Pyramid: AG2 (256×256)")
+show_img(AG4_img, "Image Pyramid: AG4 (128×128)")
+show_img(AG8_img, "Image Pyramid: AG8 (64×64)")
+
+AG2_img.save("AG2.jpg", format="JPEG")
+AG4_img.save("AG4.jpg", format="JPEG")
+AG8_img.save("AG8.jpg", format="JPEG")
