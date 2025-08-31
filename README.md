@@ -49,3 +49,6 @@ The program saves both raw images and figure plots for each stage:
 
 ## Author
 Naafiul Hossain
+
+## Notes
+- Last push on 8/31/25. Still a work in progress
