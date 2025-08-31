@@ -5,7 +5,7 @@ The implementation avoids high-level image-processing shortcuts to reinforce a p
 
 ---
 
-## 🔧 Tech Stack
+## Tech Stack
 - **Language:** Python 3.11  
 - **Environment:** Anaconda (virtual environment)  
 - **Libraries:**  
@@ -15,14 +15,14 @@ The implementation avoids high-level image-processing shortcuts to reinforce a p
 
 ---
 
-## 📖 Implementation Details
+## Implementation Details
 - All primary computations (channel extraction, grayscale averaging, histograms, thresholding, pyramids) are implemented via **explicit pixel-by-pixel scanning** with Python lists.  
 - This satisfies the requirement of avoiding NumPy vectorization, OpenCV, or other high-level APIs.  
 - PyTorch was used as a secondary tool to validate intermediate results against tensor-based implementations (e.g., histogram generation, thresholding).  
 
 ---
 
-## 🚀 Key Steps
+## Key Steps
 1. **Load & Display Image** → Import a 512×512 JPEG as RGB (8-bit/channel).  
 2. **Channel Isolation** → Extract Red, Green, and Blue channels:  
    - Grayscale single-channel representations.  
@@ -35,7 +35,7 @@ The implementation avoids high-level image-processing shortcuts to reinforce a p
 
 ---
 
-## 📂 Outputs
+## Outputs
 The program saves both raw images and figure plots for each stage:
 - Channel isolations: `RC_gray.jpg`, `GC_gray.jpg`, `BC_gray.jpg`  
 - True RGB channels: `RC_rgb.jpg`, `GC_rgb.jpg`, `BC_rgb.jpg`  
